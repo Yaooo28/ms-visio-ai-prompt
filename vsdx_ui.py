@@ -15,6 +15,10 @@ class VisioChatbotApp(ctk.CTk):
     self.geometry("1000x700")
     self.configure(bg="#ffffff")
     
+    # Initialize context menu for right-click copying
+    self.context_menu = tk.Menu(self, tearoff=0)
+    self.context_menu.add_command(label="Copy", command=self.copy_selected)
+    
     # Enhanced header with subtle shadow
     self.header_frame = ctk.CTkFrame(
       self,
@@ -166,11 +170,11 @@ class VisioChatbotApp(ctk.CTk):
       fg=text_color,
       bg=bubble_color,
       relief="flat",
-      height=0,  # Height will adjust automatically
+      height=0,
       cursor="ibeam",
       padx=16,
       pady=12,
-      width=1  # Width will be adjusted by pack
+      width=1
     )
     
     # Configure tags for styling
@@ -183,8 +187,8 @@ class VisioChatbotApp(ctk.CTk):
     # Make it read-only but selectable
     message_text.configure(state="disabled")
     
-    # Enable selection and copying
-    message_text.bind("<Control-c>", lambda e: self.copy_selected_text(e, message_text))
+    # Bind right-click menu
+    message_text.bind("<Button-3>", lambda e: self.show_context_menu(e, message_text))
     
     # Adjust height automatically based on content
     message_text.pack(fill="both", expand=True)
@@ -198,26 +202,29 @@ class VisioChatbotApp(ctk.CTk):
       avatar_label.pack(side="right", padx=(8, 0))
       message_bubble.pack(side="right", fill="x", expand=True, padx=(80, 0))
 
-  def copy_selected_text(self, event, text_widget):
+  def show_context_menu(self, event, text_widget):
     try:
-      # Get selected text
-      selected_text = text_widget.get("sel.first", "sel.last")
+      # Check if there's selected text
+      selected = text_widget.get("sel.first", "sel.last")
+      if selected:
+        self.current_text_widget = text_widget
+        self.context_menu.post(event.x_root, event.y_root)
+    except tk.TclError:
+      pass
+    return "break"
+
+  def copy_selected(self):
+    try:
+      selected_text = self.current_text_widget.get("sel.first", "sel.last")
       if selected_text:
-        # Copy to clipboard
         self.clipboard_clear()
         self.clipboard_append(selected_text)
-        
-        # Visual feedback
-        self.show_copy_feedback(text_widget)
-    except tk.TclError:
-      # No selection
+        self.show_copy_feedback(self.current_text_widget)
+    except (tk.TclError, AttributeError):
       pass
 
   def show_copy_feedback(self, text_widget):
-    # Save original colors
     original_bg = text_widget.cget("bg")
-    
-    # Flash effect
     text_widget.configure(bg="#e6f0ff")
     self.after(150, lambda: text_widget.configure(bg=original_bg))
 
